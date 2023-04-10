@@ -1,0 +1,152 @@
+---
+title: "Projeto AV1 - Introdução ao R aplicado a CD"
+author: "Edilton Brandão"
+date: "2023-04-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Sobre a base de dados
+
+A base do projeto trata-se de um conjunto de dados sobre as causas de morte em todo o mundo. Os dados incluem o número anual de mortes por causa, como doenças cardíacas, câncer, doenças respiratórias, acidentes e muito mais, para países em todo o mundo. O conjunto de dados é fornecido pela Our World in Data, uma organização sem fins lucrativos que se dedica a fornecer informações e análises baseadas em evidências sobre os principais problemas globais.
+
+Download dos dados: [Causes of Death - Our World In Data \| Kaggle](https://www.kaggle.com/datasets/ivanchvez/causes-of-death-our-world-in-data)
+
+## Leitura dos dados
+
+```{r setando, echo=FALSE}
+# setando diretório
+setwd("C:/Users/Edilton/OneDrive - Fundacao Getulio Vargas - FGV/fgv-graduacao/5-periodo/intro-r/proj-av1")
+```
+
+**Gráfico de barras com as 5 maiores causas de mortes no mundo**
+
+Este gráfico foi construído a partir da contagem do número total de mortes por cada causa, levando em consideração todos os anos e países presentes na base de dados. O gráfico de barras apresenta as 5 principais causas de morte.
+
+```{r barplot}
+
+# Carreganso as bibliotecas necessárias
+library(tidyverse)
+library(magrittr)
+library(dplyr)
+Sys.setlocale("LC_CTYPE", "pt_BR.UTF-8")
+
+
+# Carregando o conjunto de dados
+causas_morte <- read.csv("dados/deaths.csv")
+
+
+# Substituindo espaços em branco e strings vazias por NA
+# https://stackoverflow.com/questions/51449243/how-to-replace-empty-string-with-na-in-r-dataframe
+dados_com_na <- causas_morte %>%
+  mutate_all(funs(ifelse(. == "" | . == " ", NA, .)))
+
+# Transformando o conjunto de dados para um formato longo, onde cada linha representa um país, código, um ano, uma causa de morte e o número de mortes associadas
+# http://www.cookbook-r.com/Manipulating_data/Converting_data_between_wide_and_long_format/
+dados_longos <- dados_com_na %>%
+  gather(key = "Causa", value = "Mortes", Number.of.executions..Amnesty.International.:Deaths...Parkinson.s.disease...Sex..Both...Age..All.Ages..Number.) %>%
+  mutate(Mortes = parse_number(Mortes))
+
+# Pegando somente os dados sobre países, excluindo continentes e outros tipos de regiões
+dados_paises <- dados_longos %>%
+  filter(!is.na(Code))
+
+
+
+# GRÁFICO DE BARRAS
+
+# Removendo as linhas com valores NA na coluna "Mortes"
+# https://www.r-bloggers.com/2022/06/remove-rows-from-the-data-frame-in-r/
+# Agrupando os dados por causa de morte e calcule o total de mortes por causa:
+total_mortes_causa <- dados_paises %>%
+  filter(!is.na(Mortes)) %>% group_by(Causa) %>%
+  summarize(Total_Mortes = sum(Mortes, na.rm = TRUE))
+
+# Ordenando as causas de morte por total de mortes e selecione o top 5:
+# https://sparkbyexamples.com/r-programming/order-dataframe-by-one-descending-and-one-ascending-column-in-r/
+top_5_causas <- total_mortes_causa %>%
+  arrange(desc(Total_Mortes)) %>%
+  slice(1:5)
+
+# Criando um vetor com os nomes originais e um vetor com os novos nomes mais curtos
+nomes_originais <- top_5_causas$Causa
+nomes_curto <- c("Doenças cardiovasculares", "Câncer", "Doenças respiratórias crônicas", "Infecções respiratórias", "Distúrbios neonatais")
+
+# Criando o vetor 'name_vec' usando a função 'setNames()' que servirá para mapear cada elemento de nomes_curto  ao nome do elemento correspondente em nomes_originais
+name_vec <- setNames(nomes_curto, nomes_originais)
+
+# Renomeando as colunas do data frame 'top_5_causas' de acordo com o vetor 'name_vec' referências: https://cmdlinetips.com/2019/04/how-to-recode-a-column-with-dplyr-in-r/ https://stackoverflow.com/questions/60131993/rename-columns-based-on-vector
+top_5_causas <- top_5_causas %>%
+  mutate(Causa = recode(Causa, !!!name_vec))
+
+
+# Cria um gráfico de barras horizontais
+# https://mode.com/example-gallery/r_horizontal_bar/
+grafico_barras_horiz <- ggplot(data = top_5_causas, aes(x = Total_Mortes, y = reorder(Causa, Total_Mortes))) +
+  geom_bar(stat = "identity", fill = "#0072B2") +
+  labs(x = "Total de mortes", y = "Causa de morte", title = "Top 5 causas de mortes (mundo)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+# Exibe o gráfico
+print(grafico_barras_horiz)
+
+
+```
+
+**Evolução do número de casos de mortes para cada caso no Brasil**
+
+Este gráfico tem como objetivo apresentar uma análise das 5 principais causas de morte no Brasil, de acordo com os dados disponíveis. Um gráfico de linha é utilizado para exibir o número total de mortes por cada uma dessas causas em cada ano.
+
+```{r linechart}
+
+
+# obtendo dados somente do Brasil
+dados_brasil <- dados_paises %>%
+  filter(Code == "BRA" & !is.na(Mortes))
+
+# Filtra os dados para as cinco principais causas de morte no Brasil
+top_5_causas_brasil <- dados_brasil %>%
+  group_by(Causa) %>%
+  summarize(Total_Mortes = sum(Mortes, na.rm = TRUE)) %>%
+  arrange(desc(Total_Mortes)) %>%
+  slice(1:5)
+  
+
+# Filtrando o data frame original para incluir apenas as 5 maiores causas de morte
+dados_filtrados <- dados_brasil %>%
+  filter(Causa %in% top_5_causas_brasil$Causa)
+
+# Criando um vetor com os nomes originais e um vetor com os novos nomes mais curtos
+nomes_originais <- top_5_causas_brasil$Causa
+nomes_curto <- c("Doenças cardiovasculares", "Câncer", "Infecções respiratórias", "Doenças digestivas", "Violência interpessoal")
+
+# Criando o vetor 'name_vec' usando a função 'setNames()'
+# servirá para substituir os nomes na coluna Causa
+name_vec <- setNames(nomes_curto, nomes_originais)
+
+
+# Renomeando os nomes das doenças no data frame, nessa parte foi necessário olhar consultar antes o dataframe top_5_causas_brasil
+dados_renomeados <- dados_filtrados %>%
+  mutate(Causa = recode(Causa, !!!name_vec))
+```
+
+Criando o grafico de linhas com numeros de mortes ao longo do tempo
+
+```{r, fig.width = 9, fig.height = 6}
+grafico <- ggplot(dados_renomeados, aes(x = Year, y = Mortes, group = Causa, color = Causa)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Evolução do número de casos de mortes por causa (Brasil)",
+       x = "Ano",
+       y = "Quantidade de mortes",
+       color = "Causa") +
+  theme(legend.position = "bottom")
+
+# Exibindo o gráfico
+print(grafico)
+
+```
