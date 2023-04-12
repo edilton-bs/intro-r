@@ -1,7 +1,7 @@
 ---
 title: "Projeto AV1 - Introdução ao R aplicado a CD"
 author: "Edilton Brandão"
-date: "2023-04-10"
+date: "2023-04-12"
 output: html_document
 ---
 
@@ -36,16 +36,15 @@ Sys.setlocale("LC_CTYPE", "pt_BR.UTF-8")
 
 
 # Carregando o conjunto de dados
-causas_morte <- read.csv("dados/deaths.csv")
+causas_morte <- read.csv("https://raw.githubusercontent.com/edilton-bs/intro-r/main/av1/dados/deaths.csv")
 
 
 # Substituindo espaços em branco e strings vazias por NA
-# https://stackoverflow.com/questions/51449243/how-to-replace-empty-string-with-na-in-r-dataframe
 dados_com_na <- causas_morte %>%
   mutate_all(funs(ifelse(. == "" | . == " ", NA, .)))
 
 # Transformando o conjunto de dados para um formato longo, onde cada linha representa um país, código, um ano, uma causa de morte e o número de mortes associadas
-# http://www.cookbook-r.com/Manipulating_data/Converting_data_between_wide_and_long_format/
+
 dados_longos <- dados_com_na %>%
   gather(key = "Causa", value = "Mortes", Number.of.executions..Amnesty.International.:Deaths...Parkinson.s.disease...Sex..Both...Age..All.Ages..Number.) %>%
   mutate(Mortes = parse_number(Mortes))
@@ -59,14 +58,12 @@ dados_paises <- dados_longos %>%
 # GRÁFICO DE BARRAS
 
 # Removendo as linhas com valores NA na coluna "Mortes"
-# https://www.r-bloggers.com/2022/06/remove-rows-from-the-data-frame-in-r/
 # Agrupando os dados por causa de morte e calcule o total de mortes por causa:
 total_mortes_causa <- dados_paises %>%
   filter(!is.na(Mortes)) %>% group_by(Causa) %>%
   summarize(Total_Mortes = sum(Mortes, na.rm = TRUE))
 
 # Ordenando as causas de morte por total de mortes e selecione o top 5:
-# https://sparkbyexamples.com/r-programming/order-dataframe-by-one-descending-and-one-ascending-column-in-r/
 top_5_causas <- total_mortes_causa %>%
   arrange(desc(Total_Mortes)) %>%
   slice(1:5)
@@ -78,13 +75,12 @@ nomes_curto <- c("Doenças cardiovasculares", "Câncer", "Doenças respiratória
 # Criando o vetor 'name_vec' usando a função 'setNames()' que servirá para mapear cada elemento de nomes_curto  ao nome do elemento correspondente em nomes_originais
 name_vec <- setNames(nomes_curto, nomes_originais)
 
-# Renomeando as colunas do data frame 'top_5_causas' de acordo com o vetor 'name_vec' referências: https://cmdlinetips.com/2019/04/how-to-recode-a-column-with-dplyr-in-r/ https://stackoverflow.com/questions/60131993/rename-columns-based-on-vector
+# Renomeando as colunas do data frame 'top_5_causas' de acordo com o vetor 'name_vec' 
 top_5_causas <- top_5_causas %>%
   mutate(Causa = recode(Causa, !!!name_vec))
 
 
 # Cria um gráfico de barras horizontais
-# https://mode.com/example-gallery/r_horizontal_bar/
 grafico_barras_horiz <- ggplot(data = top_5_causas, aes(x = Total_Mortes, y = reorder(Causa, Total_Mortes))) +
   geom_bar(stat = "identity", fill = "#0072B2") +
   labs(x = "Total de mortes", y = "Causa de morte", title = "Top 5 causas de mortes (mundo)") +
@@ -148,5 +144,22 @@ grafico <- ggplot(dados_renomeados, aes(x = Year, y = Mortes, group = Causa, col
 
 # Exibindo o gráfico
 print(grafico)
-
 ```
+
+**Referências**
+
+[https://stackoverflow.com/questions/51449243/how-to-replace-empty-string-with-na-in-r-dataframe",](https://stackoverflow.com/questions/51449243/how-to-replace-empty-string-with-na-in-r-dataframe%22,) , 8 de abril de 2023
+
+[http://www.cookbook-r.com/Manipulating_data/Converting_data_between_wide_and_long_format/",](http://www.cookbook-r.com/Manipulating_data/Converting_data_between_wide_and_long_format/%22,) 8 de abril de 2023
+
+[https://www.r-bloggers.com/2022/06/remove-rows-from-the-data-frame-in-r/",](https://www.r-bloggers.com/2022/06/remove-rows-from-the-data-frame-in-r/%22,) 11 de abril de 2023
+
+[https://sparkbyexamples.com/r-programming/order-dataframe-by-one-descending-and-one-ascending-column-in-r/",](https://sparkbyexamples.com/r-programming/order-dataframe-by-one-descending-and-one-ascending-column-in-r/%22,) 11 de abril de 2023
+
+[https://cmdlinetips.com/2019/04/how-to-recode-a-column-with-dplyr-in-r/",](https://cmdlinetips.com/2019/04/how-to-recode-a-column-with-dplyr-in-r/%22,) 11 de abril de 2023
+
+[https://stackoverflow.com/questions/60131993/rename-columns-based-on-vector",](https://stackoverflow.com/questions/60131993/rename-columns-based-on-vector%22,) 12 de abril de 2023
+
+[https://mode.com/example-gallery/r_horizontal_bar/",](https://mode.com/example-gallery/r_horizontal_bar/%22,) 12 de abril de 2023
+
+[https://r-graph-gallery.com/connected_scatterplot_ggplot2.html",](https://r-graph-gallery.com/connected_scatterplot_ggplot2.html%22,) 12 de abril de 2023
